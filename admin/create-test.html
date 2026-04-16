@@ -219,6 +219,7 @@
     postsubmitInfo = "",
     duration = {hour: "00", min: "00", sec:"00"}
   } = test;
+
     
 
   // Populate inputs
@@ -249,7 +250,7 @@
    load();
   
   async function load() { 
-    if (!testId) {render()}return;
+    if (!testId) {render(); return }
     const ref = doc(db, 'tests', testId); 
     const snap = await getDoc(ref); 
     let test = {};
