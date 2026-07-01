@@ -4,28 +4,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Submissions</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f7fb; }header { background:#1e3a8a; color:#fff; padding:15px; }
+    body { font-family: Arial, sans-serif; margin:0; background:#f5f7fb; }
+header { background:#1e3a8a; color:#fff; padding:15px; }
 header h2 { margin:0; font-size:18px; }
 header p { margin:3px 0; font-size:13px; }
-
 .container { padding:15px; }
 
-table { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; }
-th, td { padding:10px; border-bottom:1px solid #ddd; text-align:left; font-size:14px; }
-th { background:#f1f5f9; }
+/* Overall summary table */
+table.summary { width:100%; border-collapse:collapse; background:#fff; border-radius:8px; overflow:hidden; margin-bottom:25px; }
+table.summary th, table.summary td { padding:10px; border-bottom:1px solid #ddd; text-align:left; font-size:14px; }
+table.summary th { background:#f1f5f9; }
 
+/* Participant card + module breakdown */
+.participant-card { background:#fff; border-radius:8px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.08); overflow:hidden; }
+.participant-card .card-header { background:#eef2ff; padding:12px 15px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; cursor:pointer; }
+.participant-card .card-header .who { font-size:14px; }
+.participant-card .card-header .who strong { font-size:15px; color:#1e3a8a; }
+.participant-card .card-header .overall-score { font-size:14px; font-weight:bold; color:#1e3a8a; background:#dbe4ff; padding:4px 10px; border-radius:12px; }
+.participant-card .toggle-icon { font-size:12px; color:#555; margin-left:6px; }
+
+table.module-table { width:100%; border-collapse:collapse; display:none; }
+table.module-table.open { display:table; }
+table.module-table th, table.module-table td { padding:8px 15px; border-bottom:1px solid #eee; text-align:left; font-size:13px; }
+table.module-table th { background:#f8fafc; }
+table.module-table td.score-cell { font-weight:bold; }
+
+th, td { }
 @media(max-width:600px){
-  th, td { font-size:12px; padding:8px; }
+  table.summary th, table.summary td,
+  table.module-table th, table.module-table td { font-size:12px; padding:8px; }
 }
-
   </style>
 </head>
-<body><header>
+<body>
+<header>
   <h2 id="testName"></h2>
   <p id="program"></p>
   <p id="time"></p>
-</header><div class="container">
-  <table>
+</header>
+<div class="container">
+  <table class="summary">
     <thead>
       <tr>
         <th>S/N</th>
@@ -36,10 +54,14 @@ th { background:#f1f5f9; }
     </thead>
     <tbody id="tbody"></tbody>
   </table>
-</div><script type="module">
+
+  <h3 style="margin:0 0 10px;color:#1e3a8a;">Score Breakdown by Module</h3>
+  <div id="participantCards"></div>
+</div>
+
+<script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, doc, getDoc, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
   const firebaseConfig = {
     apiKey: "AIzaSyDWe6LmmWUGlWHv0zb13I6d0bGODfoRQtQ",
     authDomain: "nagari-polyclinic.firebaseapp.com",
@@ -49,14 +71,12 @@ th { background:#f1f5f9; }
     appId: "1:145295689654:web:b97fb7bfe514ea47dea317",
     measurementId: "G-XL6Y1PB0N5"
   };
-
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
-
   const params = new URLSearchParams(window.location.search);
   const testId = params.get('testId');
-
   let questions = [];
+  let moduleOrder = [];
 
   function format(ts) {
     return new Date(ts).toLocaleString();
@@ -64,19 +84,82 @@ th { background:#f1f5f9; }
 
   function calculateScore(responses) {
     let correct = 0;
-
     responses.forEach((res, i) => {
       if (res === questions[i].answer) correct++;
     });
-
     return ((correct / questions.length) * 100).toFixed(2);
+  }
+
+  // Returns an array of { module, correct, total, score } in module first-seen order
+  function calculateModuleScores(responses) {
+    const stats = {};
+    questions.forEach((q, i) => {
+      const mod = q.module || 'Unspecified';
+      if (!stats[mod]) stats[mod] = { correct: 0, total: 0 };
+      stats[mod].total++;
+      if (responses[i] === q.answer) stats[mod].correct++;
+    });
+    return moduleOrder
+      .filter(mod => stats[mod])
+      .map(mod => ({
+        module: mod,
+        correct: stats[mod].correct,
+        total: stats[mod].total,
+        score: ((stats[mod].correct / stats[mod].total) * 100).toFixed(2)
+      }));
+  }
+
+  function buildParticipantCard(sn, sub, overallScore) {
+    const moduleScores = calculateModuleScores(sub.responses);
+    const card = document.createElement('div');
+    card.className = 'participant-card';
+
+    const header = document.createElement('div');
+    header.className = 'card-header';
+    header.innerHTML = `
+      <div class="who">
+        <strong>${sn}. ${sub.participant.name}</strong> &middot; ID: ${sub.participant.id}
+        <span class="toggle-icon">&#9660; view module scores</span>
+      </div>
+      <div class="overall-score">Overall: ${overallScore}%</div>
+    `;
+
+    const table = document.createElement('table');
+    table.className = 'module-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Module</th>
+          <th>Correct</th>
+          <th>Total</th>
+          <th>Score (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${moduleScores.map(m => `
+          <tr>
+            <td>${m.module}</td>
+            <td>${m.correct}</td>
+            <td>${m.total}</td>
+            <td class="score-cell">${m.score}%</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    `;
+
+    header.addEventListener('click', () => {
+      table.classList.toggle('open');
+    });
+
+    card.appendChild(header);
+    card.appendChild(table);
+    return card;
   }
 
   async function load() {
     // Load test
     const testSnap = await getDoc(doc(db, 'tests', testId));
     const test = testSnap.data();
-
     document.getElementById('testName').textContent = test.name;
     document.getElementById('program').textContent = test.for;
     document.getElementById('time').textContent = `Start: ${format(test.startingTimestamp)} | End: ${format(test.endingTimestamp)}`;
@@ -85,29 +168,41 @@ th { background:#f1f5f9; }
     const qSnap = await getDoc(doc(db, 'questions', testId));
     questions = qSnap.data().questions || [];
 
+    // Preserve module order as first seen in the questions list
+    moduleOrder = [];
+    questions.forEach(q => {
+      const mod = q.module || 'Unspecified';
+      if (!moduleOrder.includes(mod)) moduleOrder.push(mod);
+    });
+
     // Load submissions
     const q = query(collection(db, 'submissions'), where('testId', '==', testId));
     const snap = await getDocs(q);
-
     const tbody = document.getElementById('tbody');
+    const cardsContainer = document.getElementById('participantCards');
     let i = 1;
-
-    snap.forEach(doc => {
-      const sub = doc.data();
+    snap.forEach(docSnap => {
+      const sub = docSnap.data();
       const score = calculateScore(sub.responses);
 
+      // Summary row
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${i++}</td>
+        <td>${i}</td>
         <td>${sub.participant.id}</td>
         <td>${sub.participant.name}</td>
         <td>${score}%</td>
       `;
-
       tbody.appendChild(tr);
+
+      // Per-participant module breakdown card
+      cardsContainer.appendChild(buildParticipantCard(i, sub, score));
+
+      i++;
     });
   }
 
   load();
-</script></body>
+</script>
+</body>
 </html>
