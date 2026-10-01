@@ -1,56 +1,96 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Participants</title>
+
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f7fb; }header { background:#1e3a8a; color:#fff; padding:15px; }
+    body { font-family: Arial, sans-serif; margin:0; background:#f5f7fb; }
 
-.container { padding:15px; }
+    header { background:#1e3a8a; color:#fff; padding:15px; }
 
-.form, .filters, .list { background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; }
+    .container { padding:15px; }
 
-input, select { width:100%; padding:8px; margin:6px 0; border-radius:6px; border:1px solid #ccc; }
+    .form, .filters, .list { background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; }
 
-button { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
-.add { background:#16a34a; color:#fff; }
+    input, select { width:100%; padding:8px; margin:6px 0; border-radius:6px; border:1px solid #ccc; }
 
-table { width:100%; border-collapse:collapse; }
-th, td { padding:10px; border-bottom:1px solid #ddd; font-size:14px; }
-th { background:#f1f5f9; }
+    button { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
+    .add { background:#16a34a; color:#fff; }
 
-@media(max-width:600px){ th, td { font-size:12px; } }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px; border-bottom:1px solid #ddd; font-size:14px; }
+    th { background:#f1f5f9; }
+
+    @media(max-width:600px){ th, td { font-size:12px; } }
 
   </style>
 </head>
-<body><header>
+
+<body>
+
+<header>
   <h2>Participants</h2>
-</header><div class="container">  <div class="form">
+</header>
+
+<div class="container">
+
+  <div class="form">
+
     <h3>Create Participant</h3>
-    <input type="text" id="name" placeholder="Full Name" /><select id="gender">
-  <option value="">Select Gender</option>
-  <option value="male">Male</option>
-  <option value="female">Female</option>
-</select>
 
-<input type="text" id="pid" placeholder="Participant ID" />
+    <input type="text" id="name" placeholder="Full Name" />
 
-<select id="program">
-  <option value="">Select Program</option>
-</select>
+    <select id="gender">
+      <option value="">Select Gender</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+    </select>
 
-<button class="add" id="createBtn">Create</button>
+    <input type="text" id="pid" placeholder="Participant ID" />
 
-  </div>  <div class="filters">
+    <select id="program">
+      <option value="">Select Program</option>
+    </select>
+
+    <button class="add" id="createBtn">Create</button>
+
+    <!-- ADDED: EXCEL IMPORT -->
+    <br><br>
+
+    <h3>Import Participants from Excel</h3>
+
+    <input type="file" id="excelFile" accept=".xlsx,.xls" />
+
+    <button class="add" id="importExcelBtn">
+      Import Excel
+    </button>
+
+  </div>
+
+
+  <div class="filters">
+
     <h3>Search / Filter</h3>
+
     <input type="text" id="searchName" placeholder="Search by name" />
+
     <input type="text" id="searchId" placeholder="Search by ID" />
+
     <select id="filterProgram">
       <option value="">All Programs</option>
     </select>
-  </div>  <div class="list">
+
+  </div>
+
+
+  <div class="list">
+
     <table>
+
       <thead>
+
         <tr>
           <th>S/N</th>
           <th>Name</th>
@@ -58,12 +98,43 @@ th { background:#f1f5f9; }
           <th>ID</th>
           <th>Program</th>
         </tr>
+
       </thead>
+
       <tbody id="tbody"></tbody>
+
     </table>
-  </div></div><script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, setDoc, doc, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  </div>
+
+</div>
+
+
+<script type="module">
+
+  import { initializeApp } 
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+  import { 
+    getFirestore, 
+    setDoc, 
+    doc, 
+    collection, 
+    getDocs 
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+
+  /* =========================================
+     EXCEL READER
+     ========================================= */
+
+  import * as XLSX 
+    from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+
+
+  /* =========================================
+     FIREBASE
+     ========================================= */
 
   const firebaseConfig = {
     apiKey: "AIzaSyDWe6LmmWUGlWHv0zb13I6d0bGODfoRQtQ",
@@ -74,80 +145,452 @@ th { background:#f1f5f9; }
     appId: "1:145295689654:web:b97fb7bfe514ea47dea317",
     measurementId: "G-XL6Y1PB0N5"
   };
+
+
   const app = initializeApp(firebaseConfig);
+
   const db = getFirestore(app);
 
-  const programs = ["Digital Literacy Executive Class", "Use of AI Executive Class","STEM", "IDEAS Cohort 2 Digital Literacy","IDEAS Cohort 2 Digital Marketing and E-commerce",
-                   "IDEAS Cohort 2 Data Science", "IDEAS Cohort 2 Cybersecurity",];
+
+  /* =========================================
+     PROGRAMS
+     ========================================= */
+
+  const programs = [
+    "Digital Literacy Executive Class",
+    "Use of AI Executive Class",
+    "STEM",
+    "IDEAS Cohort 2 Digital Literacy",
+    "IDEAS Cohort 2 Digital Marketing and E-commerce",
+    "IDEAS Cohort 2 Data Science",
+    "IDEAS Cohort 2 Cybersecurity",
+  ];
+
 
   const programSelect = document.getElementById('program');
+
   const filterProgram = document.getElementById('filterProgram');
 
+
   programs.forEach(p => {
+
     const opt1 = document.createElement('option');
-    opt1.value = p; opt1.textContent = p;
+
+    opt1.value = p;
+
+    opt1.textContent = p;
+
     programSelect.appendChild(opt1);
 
+
     const opt2 = document.createElement('option');
-    opt2.value = p; opt2.textContent = p;
+
+    opt2.value = p;
+
+    opt2.textContent = p;
+
     filterProgram.appendChild(opt2);
+
   });
 
+
+  /* =========================================
+     MANUAL PARTICIPANT FORM
+     ========================================= */
+
   const nameEl = document.getElementById('name');
+
   const genderEl = document.getElementById('gender');
+
   const idEl = document.getElementById('pid');
+
   const programEl = document.getElementById('program');
 
+
   document.getElementById('createBtn').onclick = async () => {
-    if (!nameEl.value || !idEl.value || !programEl.value) return alert('All fields required');
+
+    if (!nameEl.value || !idEl.value || !programEl.value) {
+
+      return alert('All fields required');
+
+    }
+
 
     const participant = {
+
       fullName: nameEl.value,
+
       name: nameEl.value,
+
       gender: genderEl.value,
+
       id: idEl.value,
+
       program: programEl.value
+
     };
 
-    await setDoc(doc(db, 'participants', participant.id), participant);
+
+    await setDoc(
+      doc(db, 'participants', participant.id),
+      participant
+    );
+
+
     alert('Created');
+
     load();
+
   };
 
+
+  /* =========================================
+     SEARCH
+     ========================================= */
+
   const searchName = document.getElementById('searchName');
+
   const searchId = document.getElementById('searchId');
 
+
+  /* =========================================
+     LOAD PARTICIPANTS
+     ========================================= */
+
   async function load() {
-    const snap = await getDocs(collection(db, 'participants'));
+
+    const snap = await getDocs(
+      collection(db, 'participants')
+    );
+
+
     const tbody = document.getElementById('tbody');
+
     tbody.innerHTML = '';
+
 
     let i = 1;
 
+
     snap.forEach(doc => {
+
       const p = doc.data();
 
-      if (searchName.value && !p.fullName.toLowerCase().includes(searchName.value.toLowerCase())) return;
-      if (searchId.value && !p.id.includes(searchId.value)) return;
-      if (filterProgram.value && p.program !== filterProgram.value) return;
+
+      if (
+        searchName.value &&
+        !p.fullName.toLowerCase().includes(
+          searchName.value.toLowerCase()
+        )
+      ) return;
+
+
+      if (
+        searchId.value &&
+        !p.id.includes(searchId.value)
+      ) return;
+
+
+      if (
+        filterProgram.value &&
+        p.program !== filterProgram.value
+      ) return;
+
 
       const tr = document.createElement('tr');
+
+
       tr.innerHTML = `
+
         <td>${i++}</td>
+
         <td>${p.fullName}</td>
+
         <td>${p.gender}</td>
+
         <td>${p.id}</td>
+
         <td>${p.program}</td>
+
       `;
 
+
       tbody.appendChild(tr);
+
     });
+
   }
 
+
   searchName.oninput = load;
+
   searchId.oninput = load;
+
   filterProgram.onchange = load;
 
+
+  /* =========================================
+     EXCEL IMPORT
+     ========================================= */
+
+  document.getElementById('importExcelBtn').onclick = async () => {
+
+    const fileInput = document.getElementById('excelFile');
+
+    const file = fileInput.files[0];
+
+
+    if (!file) {
+
+      return alert('Please select an Excel file first.');
+
+    }
+
+
+    try {
+
+      /* Read Excel file */
+
+      const data = await file.arrayBuffer();
+
+
+      /* Convert Excel file */
+
+      const workbook = XLSX.read(data, {
+        type: 'array'
+      });
+
+
+      /* Get first worksheet */
+
+      const sheetName = workbook.SheetNames[0];
+
+      const worksheet = workbook.Sheets[sheetName];
+
+
+      /* Convert worksheet to JSON */
+
+      const rows = XLSX.utils.sheet_to_json(
+        worksheet,
+        {
+          defval: ''
+        }
+      );
+
+
+      if (rows.length === 0) {
+
+        return alert('The Excel file is empty.');
+
+      }
+
+
+      let imported = 0;
+
+      let skipped = 0;
+
+
+      /* Process every Excel row */
+
+      for (const row of rows) {
+
+
+        /*
+          Accept different possible spellings
+          of the Excel column names.
+        */
+
+        const id =
+          String(
+            row["I.D Number"] ||
+            row["ID Number"] ||
+            row["I.D"] ||
+            row["ID"] ||
+            row["Participant ID"] ||
+            ""
+          ).trim();
+
+
+        const surname =
+          String(
+            row["Surname"] ||
+            row["Last Name"] ||
+            ""
+          ).trim();
+
+
+        const firstName =
+          String(
+            row["First Name"] ||
+            row["First name"] ||
+            ""
+          ).trim();
+
+
+        const otherName =
+          String(
+            row["Other Name"] ||
+            row["Other name"] ||
+            ""
+          ).trim();
+
+
+        const gender =
+          String(
+            row["Gender"] ||
+            ""
+          ).trim();
+
+
+        const program =
+          String(
+            row["Program"] ||
+            ""
+          ).trim();
+
+
+        /*
+          Build full name
+        */
+
+        const fullName = [
+          surname,
+          firstName,
+          otherName
+        ]
+        .filter(Boolean)
+        .join(" ");
+
+
+        /*
+          Skip rows without ID
+        */
+
+        if (!id) {
+
+          skipped++;
+
+          continue;
+
+        }
+
+
+        /*
+          If the Excel file already has
+          Full Name, use it.
+        */
+
+        const excelFullName =
+          String(
+            row["Full Name"] ||
+            row["Name"] ||
+            ""
+          ).trim();
+
+
+        const finalName =
+          fullName || excelFullName;
+
+
+        /*
+          Skip rows without name
+        */
+
+        if (!finalName) {
+
+          skipped++;
+
+          continue;
+
+        }
+
+
+        /*
+          Create participant object
+        */
+
+        const participant = {
+
+          fullName: finalName,
+
+          name: finalName,
+
+          surname: surname,
+
+          firstName: firstName,
+
+          otherName: otherName,
+
+          gender: gender.toLowerCase(),
+
+          id: id,
+
+          program: program
+
+        };
+
+
+        /*
+          Save to Firestore
+
+          The ID becomes the document ID.
+          If the same ID already exists,
+          it will be updated.
+        */
+
+        await setDoc(
+          doc(db, 'participants', id),
+          participant
+        );
+
+
+        imported++;
+
+      }
+
+
+      /*
+        Reload table
+      */
+
+      await load();
+
+
+      alert(
+        `Excel import completed!\n\n` +
+        `Imported: ${imported}\n` +
+        `Skipped: ${skipped}`
+      );
+
+
+      /*
+        Clear selected file
+      */
+
+      fileInput.value = '';
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+        'Error importing Excel file.\n\n' +
+        error.message
+      );
+
+    }
+
+  };
+
+
+  /* =========================================
+     INITIAL LOAD
+     ========================================= */
+
   load();
-</script></body>
+
+</script>
+
+</body>
 </html>
