@@ -1,117 +1,1024 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Questions</title>
+
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f7fb; }
-    header { display:flex; justify-content:space-between; align-items:center; padding:15px 20px; background:#1e3a8a; color:#fff; }
-    header a { background:#fff; color:#1e3a8a; padding:8px 12px; text-decoration:none; border-radius:6px; }.container { padding:20px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin:0;
+      background:#f5f7fb;
+    }
 
-.question { background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
-.question h4 { margin:0 0 10px; }
+    header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:15px 20px;
+      background:#1e3a8a;
+      color:#fff;
+    }
 
-input[type=text] { width:100%; padding:8px; margin:5px 0; border-radius:6px; border:1px solid #ccc; }
+    header a {
+      background:#fff;
+      color:#1e3a8a;
+      padding:8px 12px;
+      text-decoration:none;
+      border-radius:6px;
+    }
 
-.options { margin-top:10px; }
-.option { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+    .container {
+      padding:20px;
+    }
 
-button { padding:6px 10px; border:none; border-radius:6px; cursor:pointer; }
-.add { background:#16a34a; color:#fff; }
-.delete { background:#dc2626; color:#fff; }
-.save { background:#2563eb; color:#fff; margin-top:10px; }
+    .question {
+      background:#fff;
+      padding:15px;
+      border-radius:10px;
+      margin-bottom:15px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
 
+    .question h4 {
+      margin:0 0 10px;
+    }
+
+    input[type=text] {
+      width:100%;
+      padding:8px;
+      margin:5px 0;
+      border-radius:6px;
+      border:1px solid #ccc;
+    }
+
+    input[type=file] {
+      width:100%;
+      padding:8px;
+      margin:5px 0;
+      border-radius:6px;
+      border:1px solid #ccc;
+      box-sizing:border-box;
+      background:#fff;
+    }
+
+    textarea {
+      width:100%;
+      padding:8px;
+      margin:5px 0;
+      border-radius:6px;
+      border:1px solid #ccc;
+      box-sizing:border-box;
+      resize:vertical;
+    }
+
+    .options {
+      margin-top:10px;
+    }
+
+    .option {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-bottom:5px;
+    }
+
+    .option textarea {
+      flex:1;
+    }
+
+    button {
+      padding:6px 10px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+    }
+
+    .add {
+      background:#16a34a;
+      color:#fff;
+    }
+
+    .delete {
+      background:#dc2626;
+      color:#fff;
+    }
+
+    .save {
+      background:#2563eb;
+      color:#fff;
+      margin-top:10px;
+    }
+
+    .save:disabled {
+      background:#94a3b8;
+      cursor:not-allowed;
+    }
+
+    .import-box {
+      background:#fff;
+      padding:15px;
+      border-radius:10px;
+      margin-bottom:15px;
+      box-shadow:0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .status {
+      margin-top:10px;
+      padding:10px;
+      background:#f1f5f9;
+      border-radius:6px;
+      display:none;
+    }
+
+    .test-info {
+      margin-bottom:15px;
+      padding:10px;
+      background:#e0e7ff;
+      border-radius:6px;
+    }
   </style>
 </head>
-<body><header>
+
+<body>
+
+<header>
   <h2>Questions</h2>
   <a href="dashboard.html">Back</a>
-</header><div class="container">
-  <button class="add" id="addQuestion">+ Add Question</button>
+</header>
+
+
+<div class="container">
+
+  <!-- TEST INFORMATION -->
+  <div class="test-info">
+    <strong>Test ID:</strong>
+    <span id="testIdDisplay"></span>
+  </div>
+
+
+  <!-- EXCEL IMPORT -->
+  <div class="import-box">
+
+    <h3>Import Questions from Excel</h3>
+
+    <p>
+      Excel columns:
+      <strong>Question, Option A, Option B, Option C, Option D, Correct Answer</strong>
+    </p>
+
+    <input
+      type="file"
+      id="excelFile"
+      accept=".xlsx,.xls"
+    />
+
+    <br><br>
+
+    <button class="add" id="importBtn">
+      Import Questions
+    </button>
+
+    <button class="save" id="saveBtn" disabled>
+      Save Questions
+    </button>
+
+    <div class="status" id="status"></div>
+
+  </div>
+
+
+  <!-- QUESTIONS -->
   <div id="questionsContainer"></div>
-  <button class="save" id="saveBtn">Save</button>
-</div><script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+</div>
+
+
+<script type="module">
+
+  /* ==========================================
+     FIREBASE
+     ========================================== */
+
+  import {
+    initializeApp
+  }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+
+  import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc
+  }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+
+  /* ==========================================
+     EXCEL READER
+     ========================================== */
+
+  import * as XLSX
+  from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
+
+
+  /* ==========================================
+     FIREBASE CONFIGURATION
+     ========================================== */
 
   const firebaseConfig = {
+
     apiKey: "AIzaSyDWe6LmmWUGlWHv0zb13I6d0bGODfoRQtQ",
+
     authDomain: "nagari-polyclinic.firebaseapp.com",
+
     projectId: "nagari-polyclinic",
+
     storageBucket: "nagari-polyclinic.firebasestorage.app",
+
     messagingSenderId: "145295689654",
+
     appId: "1:145295689654:web:b97fb7bfe514ea47dea317",
+
     measurementId: "G-XL6Y1PB0N5"
+
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
 
-  const params = new URLSearchParams(window.location.search);
-  const testId = params.get('testId');
+  const app =
+    initializeApp(firebaseConfig);
 
-  const container = document.getElementById('questionsContainer');
-  const addBtn = document.getElementById('addQuestion');
-  const saveBtn = document.getElementById('saveBtn');
+
+  const db =
+    getFirestore(app);
+
+
+  /* ==========================================
+     GET TEST ID
+     ========================================== */
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+
+  const testId =
+    params.get("testId");
+
+
+  /* ==========================================
+     CHECK TEST ID
+     ========================================== */
+
+  if (!testId) {
+
+    alert(
+      "No Test ID was provided."
+    );
+
+  }
+
+
+  document.getElementById(
+    "testIdDisplay"
+  ).textContent =
+    testId || "Not available";
+
+
+  /* ==========================================
+     ELEMENTS
+     ========================================== */
+
+  const container =
+    document.getElementById(
+      "questionsContainer"
+    );
+
+
+  const importBtn =
+    document.getElementById(
+      "importBtn"
+    );
+
+
+  const saveBtn =
+    document.getElementById(
+      "saveBtn"
+    );
+
+
+  const excelFile =
+    document.getElementById(
+      "excelFile"
+    );
+
+
+  const status =
+    document.getElementById(
+      "status"
+    );
+
+
+  /* ==========================================
+     QUESTIONS ARRAY
+     ========================================== */
 
   let questions = [];
 
+
+  /* ==========================================
+     STATUS MESSAGE
+     ========================================== */
+
+  function showStatus(message) {
+
+    status.style.display = "block";
+
+    status.textContent =
+      message;
+
+  }
+
+
+  /* ==========================================
+     ESCAPE HTML
+     ========================================== */
+
+  function escapeHTML(value) {
+
+    return String(value)
+
+      .replace(/&/g, "&amp;")
+
+      .replace(/</g, "&lt;")
+
+      .replace(/>/g, "&gt;")
+
+      .replace(/"/g, "&quot;")
+
+      .replace(/'/g, "&#039;");
+
+  }
+
+
+  /* ==========================================
+     RENDER QUESTIONS
+     ========================================== */
+
   function render() {
-    container.innerHTML = '';
+
+    container.innerHTML = "";
+
 
     questions.forEach((q, qi) => {
-      const div = document.createElement('div');
-      div.className = 'question';
+
+      const div =
+        document.createElement("div");
+
+
+      div.className =
+        "question";
+
 
       div.innerHTML = `
-        <h4>Question ${qi + 1}</h4>
-        <textarea placeholder="Prompt" rows="3" onchange="updatePrompt(${qi}, this.value)">${q.prompt}</textarea><div class="options">
-      ${q.options.map((opt, oi) => `
-        <div class="option">
-          <input type="radio" name="answer-${qi}" ${q.answer === oi ? 'checked' : ''} onclick="setAnswer(${qi}, ${oi})" />
-          <textarea rows="2" onchange="updateOption(${qi}, ${oi}, this.value)">${opt}</textarea>
-          <button class="delete" onclick="deleteOption(${qi}, ${oi})">x</button>
+
+        <h4>
+          Question ${qi + 1}
+        </h4>
+
+        <textarea
+          placeholder="Question"
+          rows="3"
+          onchange="updatePrompt(${qi}, this.value)"
+        >${escapeHTML(q.prompt)}</textarea>
+
+
+        <div class="options">
+
+          ${q.options.map((opt, oi) => `
+
+            <div class="option">
+
+              <input
+                type="radio"
+                name="answer-${qi}"
+                ${q.answer === oi ? "checked" : ""}
+                onclick="setAnswer(${qi}, ${oi})"
+              />
+
+              <textarea
+                rows="2"
+                onchange="updateOption(${qi}, ${oi}, this.value)"
+              >${escapeHTML(opt)}</textarea>
+
+            </div>
+
+          `).join("")}
+
         </div>
-      `).join('')}
-    </div>
 
-    <button class="add" onclick="addOption(${qi})">+ Option</button>
-    <button class="delete" onclick="deleteQuestion(${qi})">Delete Question</button>
-  `;
+      `;
 
-  container.appendChild(div);
-});
 
-}
+      container.appendChild(div);
 
-window.updatePrompt = (qi, val) => { questions[qi].prompt = val; };
+    });
 
-window.updateOption = (qi, oi, val) => { questions[qi].options[oi] = val; };
+  }
 
-window.setAnswer = (qi, oi) => { questions[qi].answer = oi; };
 
-window.addOption = (qi) => { questions[qi].options.push(''); render(); };
+  /* ==========================================
+     UPDATE QUESTION
+     ========================================== */
 
-window.deleteOption = (qi, oi) => { if (questions[qi].options.length === 1) return alert('At least one option required'); questions[qi].options.splice(oi, 1); if (questions[qi].answer === oi) questions[qi].answer = null; render(); };
+  window.updatePrompt =
+    (qi, value) => {
 
-window.deleteQuestion = (qi) => { questions.splice(qi, 1); render(); };
+      questions[qi].prompt =
+        value;
 
-addBtn.onclick = () => { questions.push({ prompt:'', options:[''], answer:null }); render(); };
+    };
 
-async function load() { const ref = doc(db, 'questions', testId); const snap = await getDoc(ref); if (snap.exists()) { questions = snap.data().questions || []; } render(); }
 
-saveBtn.onclick = async () => { for (let q of questions) { if (!q.prompt) return alert('Prompt required'); if (q.answer === null) return alert('Answer must be selected'); }
+  /* ==========================================
+     UPDATE OPTION
+     ========================================== */
 
-await setDoc(doc(db, 'questions', testId), {
-  testId,
-  questions
-});
+  window.updateOption =
+    (qi, oi, value) => {
 
-alert('Saved successfully');
+      questions[qi].options[oi] =
+        value;
 
-};
+    };
 
-load(); </script>
+
+  /* ==========================================
+     SELECT ANSWER
+     ========================================== */
+
+  window.setAnswer =
+    (qi, oi) => {
+
+      questions[qi].answer =
+        oi;
+
+    };
+
+
+  /* ==========================================
+     IMPORT EXCEL
+     ========================================== */
+
+  importBtn.onclick =
+    async () => {
+
+      const file =
+        excelFile.files[0];
+
+
+      if (!file) {
+
+        alert(
+          "Please select an Excel file first."
+        );
+
+        return;
+
+      }
+
+
+      try {
+
+        showStatus(
+          "Reading Excel file..."
+        );
+
+
+        /* Read file */
+
+        const data =
+          await file.arrayBuffer();
+
+
+        /* Read workbook */
+
+        const workbook =
+          XLSX.read(
+            data,
+            {
+              type: "array"
+            }
+          );
+
+
+        /* Get first sheet */
+
+        const sheetName =
+          workbook.SheetNames[0];
+
+
+        const worksheet =
+          workbook.Sheets[
+            sheetName
+          ];
+
+
+        /* Convert sheet to JSON */
+
+        const rows =
+          XLSX.utils.sheet_to_json(
+            worksheet,
+            {
+              defval: ""
+            }
+          );
+
+
+        if (rows.length === 0) {
+
+          alert(
+            "The Excel file is empty."
+          );
+
+          return;
+
+        }
+
+
+        /* Clear old questions */
+
+        questions = [];
+
+
+        let skipped = 0;
+
+
+        /* ==================================
+           PROCESS EACH EXCEL ROW
+           ================================== */
+
+        rows.forEach(row => {
+
+
+          /* Question */
+
+          const prompt =
+            String(
+
+              row["Question"] ||
+              row["question"] ||
+              row["Prompt"] ||
+              ""
+
+            ).trim();
+
+
+          /* Options */
+
+          const optionA =
+            String(
+
+              row["Option A"] ||
+              row["A"] ||
+              ""
+
+            ).trim();
+
+
+          const optionB =
+            String(
+
+              row["Option B"] ||
+              row["B"] ||
+              ""
+
+            ).trim();
+
+
+          const optionC =
+            String(
+
+              row["Option C"] ||
+              row["C"] ||
+              ""
+
+            ).trim();
+
+
+          const optionD =
+            String(
+
+              row["Option D"] ||
+              row["D"] ||
+              ""
+
+            ).trim();
+
+
+          /* Correct answer */
+
+          const correctAnswer =
+            String(
+
+              row["Correct Answer"] ||
+              row["Correct"] ||
+              row["Answer"] ||
+              ""
+
+            )
+
+            .trim()
+            .toUpperCase();
+
+
+          /* ==================================
+             CHECK REQUIRED DATA
+             ================================== */
+
+          if (
+
+            !prompt ||
+            !optionA ||
+            !optionB ||
+            !optionC ||
+            !optionD ||
+            !["A", "B", "C", "D"]
+              .includes(correctAnswer)
+
+          ) {
+
+            skipped++;
+
+            return;
+
+          }
+
+
+          /* ==================================
+             CONVERT A-D TO 0-3
+             ================================== */
+
+          const answerMap = {
+
+            A: 0,
+
+            B: 1,
+
+            C: 2,
+
+            D: 3
+
+          };
+
+
+          const answer =
+            answerMap[
+              correctAnswer
+            ];
+
+
+          /* ==================================
+             CREATE QUESTION
+             ================================== */
+
+          questions.push({
+
+            prompt: prompt,
+
+            options: [
+
+              optionA,
+
+              optionB,
+
+              optionC,
+
+              optionD
+
+            ],
+
+            answer: answer
+
+          });
+
+        });
+
+
+        /* ==================================
+           CHECK RESULT
+           ================================== */
+
+        if (questions.length === 0) {
+
+          alert(
+            "No valid questions were found."
+          );
+
+          return;
+
+        }
+
+
+        /* ==================================
+           SHOW QUESTIONS
+           ================================== */
+
+        render();
+
+
+        /* Enable save */
+
+        saveBtn.disabled = false;
+
+
+        showStatus(
+
+          questions.length +
+          " questions imported successfully." +
+
+          (
+            skipped > 0
+              ? " " + skipped +
+                " row(s) were skipped because of missing or invalid information."
+              : ""
+          ) +
+
+          " Review the questions and click Save Questions."
+
+        );
+
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        alert(
+
+          "Error reading Excel file.\n\n" +
+          error.message
+
+        );
+
+      }
+
+    };
+
+
+  /* ==========================================
+     SAVE QUESTIONS
+     ========================================== */
+
+  saveBtn.onclick =
+    async () => {
+
+      if (
+        questions.length === 0
+      ) {
+
+        alert(
+          "There are no questions to save."
+        );
+
+        return;
+
+      }
+
+
+      /* Validate questions */
+
+      for (
+        let i = 0;
+        i < questions.length;
+        i++
+      ) {
+
+        const q =
+          questions[i];
+
+
+        if (
+          !q.prompt.trim()
+        ) {
+
+          alert(
+            `Question ${i + 1} is missing.`
+          );
+
+          return;
+
+        }
+
+
+        if (
+          q.options.length !== 4
+        ) {
+
+          alert(
+            `Question ${i + 1} must have exactly 4 options.`
+          );
+
+          return;
+
+        }
+
+
+        for (
+          let j = 0;
+          j < 4;
+          j++
+        ) {
+
+          if (
+            !q.options[j].trim()
+          ) {
+
+            alert(
+              `Question ${i + 1}, Option ${String.fromCharCode(65 + j)} is empty.`
+            );
+
+            return;
+
+          }
+
+        }
+
+
+        if (
+          q.answer === null ||
+          q.answer === undefined
+        ) {
+
+          alert(
+            `Question ${i + 1} does not have a correct answer.`
+          );
+
+          return;
+
+        }
+
+      }
+
+
+      try {
+
+        saveBtn.disabled = true;
+
+
+        showStatus(
+          "Saving questions to Firebase..."
+        );
+
+
+        /* ==================================
+           SAVE TO FIRESTORE
+           ================================== */
+
+        await setDoc(
+
+          doc(
+            db,
+            "questions",
+            testId
+          ),
+
+          {
+
+            testId: testId,
+
+            questions: questions
+
+          }
+
+        );
+
+
+        /* ==================================
+           SUCCESS
+           ================================== */
+
+        alert(
+          questions.length +
+          " questions saved successfully."
+        );
+
+
+        showStatus(
+
+          questions.length +
+          " questions are now saved to this CBT."
+
+        );
+
+
+        saveBtn.disabled = true;
+
+
+        /* Clear Excel selection */
+
+        excelFile.value = "";
+
+
+      } catch (error) {
+
+        console.error(error);
+
+
+        alert(
+
+          "Error saving questions.\n\n" +
+          error.message
+
+        );
+
+
+        saveBtn.disabled = false;
+
+      }
+
+    };
+
+
+  /* ==========================================
+     LOAD EXISTING QUESTIONS
+     ========================================== */
+
+  async function load() {
+
+    if (!testId) {
+      return;
+    }
+
+
+    try {
+
+      const ref =
+        doc(
+          db,
+          "questions",
+          testId
+        );
+
+
+      const snap =
+        await getDoc(ref);
+
+
+      if (snap.exists()) {
+
+        questions =
+          snap.data().questions || [];
+
+
+        render();
+
+
+        if (questions.length > 0) {
+
+          showStatus(
+
+            questions.length +
+            " existing questions loaded."
+
+          );
+
+        }
+
+      } else {
+
+        questions = [];
+
+        render();
+
+      }
+
+
+    } catch (error) {
+
+      console.error(error);
+
+
+      alert(
+        "Could not load questions."
+      );
+
+    }
+
+  }
+
+
+  /* ==========================================
+     INITIAL LOAD
+     ========================================== */
+
+  load();
+
+</script>
 
 </body>
 </html>
