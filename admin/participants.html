@@ -12,19 +12,73 @@
 
     .container { padding:15px; }
 
-    .form, .filters, .list { background:#fff; padding:15px; border-radius:10px; margin-bottom:15px; }
+    .form, .filters, .list {
+      background:#fff;
+      padding:15px;
+      border-radius:10px;
+      margin-bottom:15px;
+    }
 
-    input, select { width:100%; padding:8px; margin:6px 0; border-radius:6px; border:1px solid #ccc; }
+    input, select {
+      width:100%;
+      padding:8px;
+      margin:6px 0;
+      border-radius:6px;
+      border:1px solid #ccc;
+      box-sizing:border-box;
+    }
 
-    button { padding:8px 12px; border:none; border-radius:6px; cursor:pointer; }
-    .add { background:#16a34a; color:#fff; }
+    button {
+      padding:8px 12px;
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+    }
 
-    table { width:100%; border-collapse:collapse; }
-    th, td { padding:10px; border-bottom:1px solid #ddd; font-size:14px; }
-    th { background:#f1f5f9; }
+    .add {
+      background:#16a34a;
+      color:#fff;
+    }
 
-    @media(max-width:600px){ th, td { font-size:12px; } }
+    .save {
+      background:#1e3a8a;
+      color:#fff;
+      margin-top:10px;
+    }
 
+    .save:disabled {
+      background:#94a3b8;
+      cursor:not-allowed;
+    }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+    }
+
+    th, td {
+      padding:10px;
+      border-bottom:1px solid #ddd;
+      font-size:14px;
+    }
+
+    th {
+      background:#f1f5f9;
+    }
+
+    .status {
+      margin-top:10px;
+      padding:10px;
+      background:#f1f5f9;
+      border-radius:6px;
+      display:none;
+    }
+
+    @media(max-width:600px){
+      th, td {
+        font-size:12px;
+      }
+    }
   </style>
 </head>
 
@@ -36,47 +90,50 @@
 
 <div class="container">
 
+  <!-- EXCEL IMPORT SECTION -->
   <div class="form">
 
-    <h3>Create Participant</h3>
+    <h3>Import Participants from Excel</h3>
 
-    <input type="text" id="name" placeholder="Full Name" />
-
-    <select id="gender">
-      <option value="">Select Gender</option>
-      <option value="male">Male</option>
-      <option value="female">Female</option>
-    </select>
-
-    <input type="text" id="pid" placeholder="Participant ID" />
+    <input
+      type="file"
+      id="excelFile"
+      accept=".xlsx,.xls"
+    />
 
     <select id="program">
       <option value="">Select Program</option>
     </select>
 
-    <button class="add" id="createBtn">Create</button>
-
-    <!-- ADDED: EXCEL IMPORT -->
-    <br><br>
-
-    <h3>Import Participants from Excel</h3>
-
-    <input type="file" id="excelFile" accept=".xlsx,.xls" />
-
     <button class="add" id="importExcelBtn">
       Import Excel
     </button>
 
+    <button class="save" id="saveBtn" disabled>
+      Save Participants
+    </button>
+
+    <div class="status" id="status"></div>
+
   </div>
 
 
+  <!-- SEARCH / FILTER -->
   <div class="filters">
 
     <h3>Search / Filter</h3>
 
-    <input type="text" id="searchName" placeholder="Search by name" />
+    <input
+      type="text"
+      id="searchName"
+      placeholder="Search by name"
+    />
 
-    <input type="text" id="searchId" placeholder="Search by ID" />
+    <input
+      type="text"
+      id="searchId"
+      placeholder="Search by ID"
+    />
 
     <select id="filterProgram">
       <option value="">All Programs</option>
@@ -85,12 +142,12 @@
   </div>
 
 
+  <!-- PARTICIPANT LIST -->
   <div class="list">
 
     <table>
 
       <thead>
-
         <tr>
           <th>S/N</th>
           <th>Name</th>
@@ -98,7 +155,6 @@
           <th>ID</th>
           <th>Program</th>
         </tr>
-
       </thead>
 
       <tbody id="tbody"></tbody>
@@ -112,29 +168,34 @@
 
 <script type="module">
 
-  import { initializeApp } 
+  /* ==========================================
+     FIREBASE
+     ========================================== */
+
+  import { initializeApp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
-  import { 
-    getFirestore, 
-    setDoc, 
-    doc, 
-    collection, 
-    getDocs 
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getFirestore,
+    setDoc,
+    doc,
+    collection,
+    getDocs
+  }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
-  /* =========================================
+  /* ==========================================
      EXCEL READER
-     ========================================= */
+     ========================================== */
 
-  import * as XLSX 
+  import * as XLSX
     from "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm";
 
 
-  /* =========================================
-     FIREBASE
-     ========================================= */
+  /* ==========================================
+     FIREBASE CONFIGURATION
+     ========================================== */
 
   const firebaseConfig = {
     apiKey: "AIzaSyDWe6LmmWUGlWHv0zb13I6d0bGODfoRQtQ",
@@ -152,9 +213,9 @@
   const db = getFirestore(app);
 
 
-  /* =========================================
-     PROGRAMS
-     ========================================= */
+  /* ==========================================
+     PROGRAM LIST
+     ========================================== */
 
   const programs = [
     "Digital Literacy Executive Class",
@@ -163,357 +224,281 @@
     "IDEAS Cohort 2 Digital Literacy",
     "IDEAS Cohort 2 Digital Marketing and E-commerce",
     "IDEAS Cohort 2 Data Science",
-    "IDEAS Cohort 2 Cybersecurity",
+    "IDEAS Cohort 2 Cybersecurity"
   ];
 
 
-  const programSelect = document.getElementById('program');
+  const programSelect =
+    document.getElementById("program");
 
-  const filterProgram = document.getElementById('filterProgram');
-
-
-  programs.forEach(p => {
-
-    const opt1 = document.createElement('option');
-
-    opt1.value = p;
-
-    opt1.textContent = p;
-
-    programSelect.appendChild(opt1);
+  const filterProgram =
+    document.getElementById("filterProgram");
 
 
-    const opt2 = document.createElement('option');
+  programs.forEach(program => {
 
-    opt2.value = p;
+    const option1 =
+      document.createElement("option");
 
-    opt2.textContent = p;
+    option1.value = program;
+    option1.textContent = program;
 
-    filterProgram.appendChild(opt2);
+    programSelect.appendChild(option1);
+
+
+    const option2 =
+      document.createElement("option");
+
+    option2.value = program;
+    option2.textContent = program;
+
+    filterProgram.appendChild(option2);
 
   });
 
 
-  /* =========================================
-     MANUAL PARTICIPANT FORM
-     ========================================= */
+  /* ==========================================
+     ELEMENTS
+     ========================================== */
 
-  const nameEl = document.getElementById('name');
+  const excelFile =
+    document.getElementById("excelFile");
 
-  const genderEl = document.getElementById('gender');
+  const importExcelBtn =
+    document.getElementById("importExcelBtn");
 
-  const idEl = document.getElementById('pid');
+  const saveBtn =
+    document.getElementById("saveBtn");
 
-  const programEl = document.getElementById('program');
-
-
-  document.getElementById('createBtn').onclick = async () => {
-
-    if (!nameEl.value || !idEl.value || !programEl.value) {
-
-      return alert('All fields required');
-
-    }
+  const status =
+    document.getElementById("status");
 
 
-    const participant = {
+  /* ==========================================
+     TEMPORARY EXCEL DATA
+     ========================================== */
 
-      fullName: nameEl.value,
-
-      name: nameEl.value,
-
-      gender: genderEl.value,
-
-      id: idEl.value,
-
-      program: programEl.value
-
-    };
+  let importedParticipants = [];
 
 
-    await setDoc(
-      doc(db, 'participants', participant.id),
-      participant
-    );
+  /* ==========================================
+     SHOW STATUS
+     ========================================== */
 
+  function showStatus(message) {
 
-    alert('Created');
+    status.style.display = "block";
 
-    load();
-
-  };
-
-
-  /* =========================================
-     SEARCH
-     ========================================= */
-
-  const searchName = document.getElementById('searchName');
-
-  const searchId = document.getElementById('searchId');
-
-
-  /* =========================================
-     LOAD PARTICIPANTS
-     ========================================= */
-
-  async function load() {
-
-    const snap = await getDocs(
-      collection(db, 'participants')
-    );
-
-
-    const tbody = document.getElementById('tbody');
-
-    tbody.innerHTML = '';
-
-
-    let i = 1;
-
-
-    snap.forEach(doc => {
-
-      const p = doc.data();
-
-
-      if (
-        searchName.value &&
-        !p.fullName.toLowerCase().includes(
-          searchName.value.toLowerCase()
-        )
-      ) return;
-
-
-      if (
-        searchId.value &&
-        !p.id.includes(searchId.value)
-      ) return;
-
-
-      if (
-        filterProgram.value &&
-        p.program !== filterProgram.value
-      ) return;
-
-
-      const tr = document.createElement('tr');
-
-
-      tr.innerHTML = `
-
-        <td>${i++}</td>
-
-        <td>${p.fullName}</td>
-
-        <td>${p.gender}</td>
-
-        <td>${p.id}</td>
-
-        <td>${p.program}</td>
-
-      `;
-
-
-      tbody.appendChild(tr);
-
-    });
+    status.textContent = message;
 
   }
 
 
-  searchName.oninput = load;
+  /* ==========================================
+     IMPORT EXCEL
+     ========================================== */
 
-  searchId.oninput = load;
+  importExcelBtn.onclick = async () => {
 
-  filterProgram.onchange = load;
+    const file = excelFile.files[0];
+
+    const selectedProgram =
+      programSelect.value;
 
 
-  /* =========================================
-     EXCEL IMPORT
-     ========================================= */
-
-  document.getElementById('importExcelBtn').onclick = async () => {
-
-    const fileInput = document.getElementById('excelFile');
-
-    const file = fileInput.files[0];
-
+    /* Check Excel */
 
     if (!file) {
 
-      return alert('Please select an Excel file first.');
+      alert("Please select an Excel file first.");
+
+      return;
+
+    }
+
+
+    /* Check program */
+
+    if (!selectedProgram) {
+
+      alert("Please select a program.");
+
+      return;
 
     }
 
 
     try {
 
+      showStatus("Reading Excel file...");
+
+
       /* Read Excel file */
 
-      const data = await file.arrayBuffer();
+      const data =
+        await file.arrayBuffer();
 
 
-      /* Convert Excel file */
+      /* Open workbook */
 
-      const workbook = XLSX.read(data, {
-        type: 'array'
-      });
-
-
-      /* Get first worksheet */
-
-      const sheetName = workbook.SheetNames[0];
-
-      const worksheet = workbook.Sheets[sheetName];
+      const workbook =
+        XLSX.read(data, {
+          type: "array"
+        });
 
 
-      /* Convert worksheet to JSON */
+      /* First worksheet */
 
-      const rows = XLSX.utils.sheet_to_json(
-        worksheet,
-        {
-          defval: ''
-        }
-      );
+      const sheetName =
+        workbook.SheetNames[0];
+
+      const worksheet =
+        workbook.Sheets[sheetName];
+
+
+      /* Convert Excel to JSON */
+
+      const rows =
+        XLSX.utils.sheet_to_json(
+          worksheet,
+          {
+            defval: ""
+          }
+        );
 
 
       if (rows.length === 0) {
 
-        return alert('The Excel file is empty.');
+        alert("The Excel file is empty.");
+
+        return;
 
       }
 
 
-      let imported = 0;
+      /* Clear previous import */
 
-      let skipped = 0;
+      importedParticipants = [];
 
 
-      /* Process every Excel row */
+      /* Process rows */
 
       for (const row of rows) {
 
 
-        /*
-          Accept different possible spellings
-          of the Excel column names.
-        */
+        /* ==============================
+           GET ID
+           ============================== */
 
-        const id =
-          String(
-            row["I.D Number"] ||
-            row["ID Number"] ||
-            row["I.D"] ||
-            row["ID"] ||
-            row["Participant ID"] ||
-            ""
-          ).trim();
+        const id = String(
 
+          row["I.D Number"] ||
+          row["ID Number"] ||
+          row["I.D"] ||
+          row["ID"] ||
+          row["Participant ID"] ||
+          ""
 
-        const surname =
-          String(
-            row["Surname"] ||
-            row["Last Name"] ||
-            ""
-          ).trim();
+        ).trim();
 
 
-        const firstName =
-          String(
-            row["First Name"] ||
-            row["First name"] ||
-            ""
-          ).trim();
+        /* ==============================
+           GET NAME
+           ============================== */
+
+        const surname = String(
+
+          row["Surname"] ||
+          row["Last Name"] ||
+          ""
+
+        ).trim();
 
 
-        const otherName =
-          String(
-            row["Other Name"] ||
-            row["Other name"] ||
-            ""
-          ).trim();
+        const firstName = String(
+
+          row["First Name"] ||
+          row["First name"] ||
+          ""
+
+        ).trim();
 
 
-        const gender =
-          String(
-            row["Gender"] ||
-            ""
-          ).trim();
+        const otherName = String(
+
+          row["Other Name"] ||
+          row["Other name"] ||
+          ""
+
+        ).trim();
 
 
-        const program =
-          String(
-            row["Program"] ||
-            ""
-          ).trim();
+        const excelFullName = String(
+
+          row["Full Name"] ||
+          row["Name"] ||
+          ""
+
+        ).trim();
 
 
-        /*
-          Build full name
-        */
+        /* ==============================
+           BUILD FULL NAME
+           ============================== */
 
-        const fullName = [
+        let fullName = [
+
           surname,
           firstName,
           otherName
+
         ]
         .filter(Boolean)
         .join(" ");
 
 
-        /*
-          Skip rows without ID
-        */
+        /* If no separated names,
+           use Full Name */
 
-        if (!id) {
+        if (!fullName) {
 
-          skipped++;
+          fullName = excelFullName;
+
+        }
+
+
+        /* ==============================
+           GET GENDER
+           ============================== */
+
+        const gender = String(
+
+          row["Gender"] ||
+          ""
+
+        ).trim();
+
+
+        /* ==============================
+           SKIP EMPTY ROWS
+           ============================== */
+
+        if (!id || !fullName) {
 
           continue;
 
         }
 
 
-        /*
-          If the Excel file already has
-          Full Name, use it.
-        */
-
-        const excelFullName =
-          String(
-            row["Full Name"] ||
-            row["Name"] ||
-            ""
-          ).trim();
-
-
-        const finalName =
-          fullName || excelFullName;
-
-
-        /*
-          Skip rows without name
-        */
-
-        if (!finalName) {
-
-          skipped++;
-
-          continue;
-
-        }
-
-
-        /*
-          Create participant object
-        */
+        /* ==============================
+           CREATE PARTICIPANT
+           ============================== */
 
         const participant = {
 
-          fullName: finalName,
+          fullName: fullName,
 
-          name: finalName,
+          name: fullName,
 
           surname: surname,
 
@@ -525,49 +510,56 @@
 
           id: id,
 
-          program: program
+          program: selectedProgram
 
         };
 
 
-        /*
-          Save to Firestore
-
-          The ID becomes the document ID.
-          If the same ID already exists,
-          it will be updated.
-        */
-
-        await setDoc(
-          doc(db, 'participants', id),
+        importedParticipants.push(
           participant
         );
-
-
-        imported++;
 
       }
 
 
-      /*
-        Reload table
-      */
+      /* ==================================
+         CHECK RESULTS
+         ================================== */
 
-      await load();
+      if (importedParticipants.length === 0) {
+
+        alert(
+          "No valid participants were found in the Excel file."
+        );
+
+        return;
+
+      }
 
 
-      alert(
-        `Excel import completed!\n\n` +
-        `Imported: ${imported}\n` +
-        `Skipped: ${skipped}`
+      /* ==================================
+         SHOW RESULT
+         ================================== */
+
+      showStatus(
+
+        importedParticipants.length +
+        " participants loaded from Excel. " +
+        "Program: " +
+        selectedProgram +
+        ". Click Save Participants to save them."
+
       );
 
 
-      /*
-        Clear selected file
-      */
+      /* Enable save */
 
-      fileInput.value = '';
+      saveBtn.disabled = false;
+
+
+      /* Display imported data */
+
+      displayImportedParticipants();
 
 
     } catch (error) {
@@ -575,7 +567,7 @@
       console.error(error);
 
       alert(
-        'Error importing Excel file.\n\n' +
+        "There was an error reading the Excel file.\n\n" +
         error.message
       );
 
@@ -584,9 +576,345 @@
   };
 
 
-  /* =========================================
+  /* ==========================================
+     DISPLAY IMPORTED PARTICIPANTS
+     ========================================== */
+
+  function displayImportedParticipants() {
+
+    const tbody =
+      document.getElementById("tbody");
+
+    tbody.innerHTML = "";
+
+
+    importedParticipants.forEach(
+      (participant, index) => {
+
+        const tr =
+          document.createElement("tr");
+
+
+        tr.innerHTML = `
+
+          <td>${index + 1}</td>
+
+          <td>${escapeHTML(participant.fullName)}</td>
+
+          <td>${escapeHTML(participant.gender)}</td>
+
+          <td>${escapeHTML(participant.id)}</td>
+
+          <td>${escapeHTML(participant.program)}</td>
+
+        `;
+
+
+        tbody.appendChild(tr);
+
+      }
+    );
+
+  }
+
+
+  /* ==========================================
+     SAVE PARTICIPANTS TO FIREBASE
+     ========================================== */
+
+  saveBtn.onclick = async () => {
+
+    if (importedParticipants.length === 0) {
+
+      alert("There are no participants to save.");
+
+      return;
+
+    }
+
+
+    const selectedProgram =
+      programSelect.value;
+
+
+    if (!selectedProgram) {
+
+      alert("Please select a program.");
+
+      return;
+
+    }
+
+
+    try {
+
+      saveBtn.disabled = true;
+
+      showStatus(
+        "Saving participants to Firebase..."
+      );
+
+
+      let saved = 0;
+
+
+      /* Save every participant */
+
+      for (
+        const participant
+        of importedParticipants
+      ) {
+
+        await setDoc(
+
+          doc(
+            db,
+            "participants",
+            participant.id
+          ),
+
+          participant
+
+        );
+
+
+        saved++;
+
+      }
+
+
+      /* ==================================
+         SUCCESS
+         ================================== */
+
+      showStatus(
+
+        saved +
+        " participants successfully saved to " +
+        selectedProgram +
+        "."
+
+      );
+
+
+      alert(
+
+        saved +
+        " participants have been successfully saved."
+
+      );
+
+
+      /* Clear temporary data */
+
+      importedParticipants = [];
+
+
+      /* Clear Excel */
+
+      excelFile.value = "";
+
+
+      /* Disable save */
+
+      saveBtn.disabled = true;
+
+
+      /* Reload Firebase data */
+
+      await load();
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      alert(
+
+        "Error saving participants.\n\n" +
+        error.message
+
+      );
+
+
+      saveBtn.disabled = false;
+
+    }
+
+  };
+
+
+  /* ==========================================
+     LOAD PARTICIPANTS FROM FIREBASE
+     ========================================== */
+
+  async function load() {
+
+    try {
+
+      const snap =
+        await getDocs(
+          collection(
+            db,
+            "participants"
+          )
+        );
+
+
+      const tbody =
+        document.getElementById("tbody");
+
+
+      tbody.innerHTML = "";
+
+
+      let i = 1;
+
+
+      snap.forEach(docSnapshot => {
+
+        const participant =
+          docSnapshot.data();
+
+
+        /* Search by name */
+
+        if (
+
+          searchName.value &&
+
+          !String(
+            participant.fullName || ""
+          )
+          .toLowerCase()
+          .includes(
+            searchName.value.toLowerCase()
+          )
+
+        ) {
+
+          return;
+
+        }
+
+
+        /* Search by ID */
+
+        if (
+
+          searchId.value &&
+
+          !String(
+            participant.id || ""
+          )
+          .toLowerCase()
+          .includes(
+            searchId.value.toLowerCase()
+          )
+
+        ) {
+
+          return;
+
+        }
+
+
+        /* Filter by program */
+
+        if (
+
+          filterProgram.value &&
+
+          participant.program !==
+          filterProgram.value
+
+        ) {
+
+          return;
+
+        }
+
+
+        const tr =
+          document.createElement("tr");
+
+
+        tr.innerHTML = `
+
+          <td>${i++}</td>
+
+          <td>${escapeHTML(participant.fullName || "")}</td>
+
+          <td>${escapeHTML(participant.gender || "")}</td>
+
+          <td>${escapeHTML(participant.id || "")}</td>
+
+          <td>${escapeHTML(participant.program || "")}</td>
+
+        `;
+
+
+        tbody.appendChild(tr);
+
+      });
+
+
+    } catch (error) {
+
+      console.error(error);
+
+      console.error(
+        "Could not load participants."
+      );
+
+    }
+
+  }
+
+
+  /* ==========================================
+     SEARCH
+     ========================================== */
+
+  const searchName =
+    document.getElementById("searchName");
+
+  const searchId =
+    document.getElementById("searchId");
+
+
+  searchName.oninput = load;
+
+  searchId.oninput = load;
+
+  filterProgram.onchange = load;
+
+
+  /* ==========================================
+     SECURITY:
+     PREVENT EXCEL DATA FROM INSERTING HTML
+     ========================================== */
+
+  function escapeHTML(value) {
+
+    return String(value)
+
+      .replace(/&/g, "&amp;")
+
+      .replace(/</g, "&lt;")
+
+      .replace(/>/g, "&gt;")
+
+      .replace(/"/g, "&quot;")
+
+      .replace(/'/g, "&#039;");
+
+  }
+
+
+  /* ==========================================
      INITIAL LOAD
-     ========================================= */
+     ========================================== */
 
   load();
 
